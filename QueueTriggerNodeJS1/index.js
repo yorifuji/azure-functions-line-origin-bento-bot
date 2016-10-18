@@ -64,19 +64,33 @@ function location_handler(context, event) {
             });
             res.on('end', () => {
                 var d = JSON.parse(body);
-                event.message = {
-                    "type"               : "image",
-                    "originalContentUrl" : d.id,
-                    "previewImageUrl"    : d.id
+                var reply_message = {
+                    "replyToken" : event.replyToken,
+                    "messages"   : [
+                        {
+                            "type" : "text",
+                            "text" : `「${event.message.address}」の雨雲の様子`
+                        },
+                        {
+                            "type"               : "image",
+                            "originalContentUrl" : d.id,
+                            "previewImageUrl"    : d.id
+                        }
+                    ]
                 };
-                resolve(event);
+                resolve(reply_message);
             });
             res.on('error', err => {
-                event.message = {
-                    "type" : "text",
-                    "text" : err.message
+                var reply_message = {
+                    "replyToken" : event.replyToken,
+                    "messages"   : [
+                        {
+                            "type" : "text",
+                            "text" : err.message
+                        }
+                    ]
                 };
-                reject(event);
+                reject(reply_message);
             });
         });
         req.write(JSON.stringify({"longUrl" : url}));
@@ -93,16 +107,15 @@ module.exports = function (context, myQueueItem) {
     message_events.forEach(event => {
         for (var mh of message_handler) {
             if (mh.type == event.message.type) {
-                event = mh.handler(context, event);
+                task.push(mh.handler(context, event));
                 break;
             }
         }
-        task.push(event);
     });
 
-    Promise.all(task).then(events => {
-        myQueueItem.events = events;
-        context.bindings.outputQueueItem = myQueueItem;
+    Promise.all(task).then(reply_messages => {
+        context.bindings.outputQueueItem = { "replyMessages" :  reply_messages };
+        context.log(context.bindings.outputQueueItem);
         context.done();
     }).catch(err => {
         context.log(err);

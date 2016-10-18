@@ -2,12 +2,9 @@
 var https = require("https");
 var url   = require("url");
 
-function post_line(event)
+function post_line(reply_message)
 {
-    var post_data = JSON.stringify({
-        "replyToken" : event.replyToken,
-        "messages"   : [ event.message ]
-    });
+    var post_data = JSON.stringify(reply_message);
     var parse_url = url.parse("https://api.line.me/v2/bot/message/reply");
     var post_options = {
         host: parse_url.host,
@@ -26,6 +23,6 @@ function post_line(event)
 
 module.exports = function (context, myQueueItem) {
     context.log('Node.js queue trigger function processed work item', myQueueItem);
-    myQueueItem.events.forEach(event => post_line(event));
+    myQueueItem.replyMessages.forEach(message => post_line(message));
     context.done();
 };
