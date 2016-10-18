@@ -6,6 +6,10 @@ var message_handler = [
     {
         "type"    : "location",
         "handler" : location_handler
+    },
+    {
+        "type"    : "text",
+        "handler" : message_handler
     }
 ];
 
@@ -95,6 +99,21 @@ function location_handler(context, event) {
         });
         req.write(JSON.stringify({"longUrl" : url}));
         req.end();
+    });
+}
+
+function message_handler(context, event) {
+    return new Promise((resolve, reject) => {
+        var reply_message = {
+            "replyToken" : event.replyToken,
+            "messages"   : [
+                {
+                    "type" : "text",
+                    "text" : event.message.text,
+                }
+            ]
+        };
+        resolve(reply_message);
     });
 }
 
