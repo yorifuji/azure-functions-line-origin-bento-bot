@@ -107,12 +107,12 @@ function origin_menu_to_line_carousel(menu_list)
     var columns = menu_list.map(menu => (
         {
             "thumbnailImageUrl" : menu.image, 
-            "title"             : "Title:" + menu.title,
-            "text"              : "Text:"  + menu.title,
+            "title"             : menu.title,
+            "text"              : menu.price_t,
             "actions"           : [
                 {
                     "type"  : "uri",
-                    "label" : "view detail",
+                    "label" : "詳細",
                     "uri"   : menu.url
                 }
             ]
