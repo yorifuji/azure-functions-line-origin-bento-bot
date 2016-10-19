@@ -154,7 +154,8 @@ function get_origin_menu(context, event) {
                 body += chunk;
             });
             res.on("end", res => {
-                var origin_menu_carousel = oigin_menu_to_line_carousel(menu_choice(JSON.parse(body), 3))
+		var data = JSON.parse(body);
+                var origin_menu_carousel = origin_menu_to_line_carousel(menu_choice(data.menu, 3))
                 var reply_message = {
                     "replyToken" : event.replyToken,
                     "messages"   : origin_menu_carousel
