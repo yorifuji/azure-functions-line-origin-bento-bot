@@ -28,9 +28,10 @@ module.exports = function (context, myTimer) {
 
     ping(context, process.env.PING_TARGET_URL).then((res) => {
         context.log(res);
+        context.done();
     }).catch(err => {
         context.log(err);
+        context.done();
     });
        
-    context.done();
 };
