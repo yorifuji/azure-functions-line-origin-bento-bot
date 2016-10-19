@@ -102,7 +102,95 @@ function location_handler(context, event) {
     });
 }
 
+function origin_menu_to_line_carousel(menu_list)
+{
+    var columns = menu_list.map(menu => (
+        {
+            "thumbnailImageUrl" : menu.image, 
+            "title"             : "Title:" + menu.title,
+            "text"              : "Text:"  + menu.title,
+            "actions"           : [
+                {
+                    "type"  : "uri",
+                    "label" : "view detail",
+                    "uri"   : menu.url
+                }
+            ]
+        }
+    ));
+    
+    return [
+        {
+            "type"     : "template",
+            "altText"  : "origin menu choice",
+            "template" : {
+                "type"    : "carousel",
+                "columns" : columns
+            }
+        }
+    ];
+}
+
+function make_random_choice(num, max)
+{
+    var choice = [];
+    while (choice.length != num) {
+        var r = Math.floor(Math.random() * max);
+        if (choice.indexOf(r) == -1) choice.push(r);
+    }
+    return choice;
+}
+
+function menu_choice(menu_list, pick_num) {
+    return make_random_choice(pick_num, menu_list.length).map(idx => menu_list[idx]);
+}
+    
+function get_origin_menu(context, event) {
+    return new Promise((resolve, reject) => {
+        var req = https.get(process.env.ORIGIN_BENTO_API_URL, res => {
+            var body = "";
+            res.setEncoding("utf8");
+            res.on("data", chunk => {
+                body += chunk;
+            });
+            res.on("end", res => {
+		var origin_menu_carousel = oigin_menu_to_line_carousel(menu_choice(JSON.parse(body), 3))
+		var reply_message = {
+		    "replyToken" : event.replyToken,
+		    "messages"   : origin_menu_carousel
+		};
+		resolve(reply_message);
+            });
+        }).on("error", err => {
+            var reply_message = {
+		"replyToken" : event.replyToken,
+		"messages"   : [
+                    {
+			"type" : "text",
+			"text" : err.message
+                    }
+		]
+            };
+            resolve(reply_message);
+        });
+    });
+}
+
+var keyword_handlers = [
+    {
+        keyword : ["オリジン", "おりじん", "オリジン東秀", "東秀"],
+        handler : get_origin_menu
+    }
+];
+
 function message_handler(context, event) {
+    for (var kh of keyword_handlers) {
+        for (var keyword of kh.keyword) {
+            if (keyword == event.message.text) {
+                return kh.handler(context, event);
+            }
+        }
+    }
     return new Promise((resolve, reject) => {
         var reply_message = {
             "replyToken" : event.replyToken,
