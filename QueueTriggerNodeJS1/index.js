@@ -31,75 +31,94 @@ function make_date_str() {
     return [year, month, date, hour, min].reduce((pre, cur) => pre + cur.toString());
 }
 
-function make_yahoo_api_map_rainfall_url(lat, lon) {
-    const yahoo_api_map_url = "http://map.olp.yahooapis.jp/OpenLocalPlatform/V1/static?";
-    const zoom   = 11;
-    const width  = 600;
-    const height = 800;
+function make_google_places_url(lat, lon, name) {
+
+    const google_places_api_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
     const query_str = querystring.stringify({
-        "appid"   : process.env.YAHOO_APP_ID,
-        "lat"     : lat,
-        "lon"     : lon,
-        "z"       : zoom,
-        "width"   : width,
-        "height"  : height,
-        "pointer" : "on",
-        "mode"    : "map",
-        "overlay" : "type:rainfall|datelabel:on|date:" + make_date_str()
+        "key"      : process.env.GOOGLE_API_KEY,
+	"location" : lat + "," + lon,
+	"name"     : name,
+	"rankby"   : "distance",
+	"language" : "ja",
+	"type"     : "food"
     });
-    return yahoo_api_map_url + query_str;
+    return google_places_api_url + query_str;
 }
 
-function location_handler(context, event) {
-
-    const url = make_yahoo_api_map_rainfall_url(event.message.latitude, event.message.longitude);
-    context.log(url);
-
-    return new Promise((resolve, reject) => {
-        var req = https.request({
-            host: 'www.googleapis.com',
-            path: '/urlshortener/v1/url?key=' + process.env.GOOGLE_API_KEY,
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-        }, res => {
-            var body = '';
-            res.on('data', chunk => {
-                body += chunk.toString();
-            });
-            res.on('end', () => {
-                var d = JSON.parse(body);
-                var reply_message = {
-                    "replyToken" : event.replyToken,
-                    "messages"   : [
-                        {
-                            "type" : "text",
-                            "text" : `「${event.message.address}」の雨雲の様子`
-                        },
-                        {
-                            "type"               : "image",
-                            "originalContentUrl" : d.id,
-                            "previewImageUrl"    : d.id
-                        }
-                    ]
-                };
-                resolve(reply_message);
-            });
-            res.on('error', err => {
-                var reply_message = {
-                    "replyToken" : event.replyToken,
-                    "messages"   : [
-                        {
-                            "type" : "text",
-                            "text" : err.message
-                        }
-                    ]
-                };
-                reject(reply_message);
-            });
-        });
-        req.write(JSON.stringify({"longUrl" : url}));
-        req.end();
+function google_places_to_reply_message(token, places)
+{
+    return new Promise((resolve,reject) => {
+	if (places.results.length) {
+            var reply_message = {
+		"replyToken" : token,
+		"messages"   : [
+                    {
+			"type" : "text",
+			"text" : "最寄りのお店は「" + places.results[0].name + "」です"
+                    },
+		    {
+			"type"      : "location",
+			"title"     : places.results[0].name,
+			"address"   : places.results[0].vicinity,
+			"latitude"  : places.results[0].geometry.location.lat,
+			"longitude" : places.results[0].geometry.location.lng
+		    }
+		]
+            };
+            resolve(reply_message);
+	}
+	else {
+            var reply_message = {
+		"replyToken" : token,
+		"messages"   : [
+                    {
+			"type" : "text",
+			"text" : "お店が見つかりません"
+                    }
+		]
+            };
+	    reject(reply_message);
+	}
     });
+}
+
+function search_origin_bento_shop(context, event)
+{    
+    var lat = event.message.latitude;
+    var lon = event.message.longitude;
+    
+    //const name = "オリジン弁当 キッチンオリジン"; // 複数ワードに対応していない？？
+    const name = "オリジン";
+    const url = make_google_places_url(lat, lon, name);
+    
+    return new Promise((resolve, reject) => {
+        var req = https.get(url, res => {
+            var body = "";
+            res.setEncoding("utf8");
+            res.on("data", chunk => {
+                body += chunk;
+            });
+            res.on("end", () => {
+                resolve(google_places_to_reply_message(event.replyToken, JSON.parse(body)));
+	    });
+        }).on("error", err => {
+            var reply_message = {
+                "replyToken" : event.replyToken,
+                "messages"   : [
+                    {
+                        "type" : "text",
+                        "text" : err.message
+                    }
+                ]
+            };
+            resolve(reply_message);
+        });
+    });
+}
+
+function location_handler(context, event)
+{
+    return search_origin_bento_shop(context, event);
 }
 
 function origin_menu_to_line_carousel(menu_list)
@@ -230,3 +249,23 @@ module.exports = function (context, myQueueItem) {
         context.done();
     });
 };
+
+/* for test: node index.js */
+
+
+if (require.main === module) {
+    var event = {
+	message : {
+	    latitude  : "35.683801",
+	    longitude : "139.753945"
+	},
+	replyToken : "token",
+    };
+    var context = console;
+    search_origin_bento_shop(context, event).then(msg => {
+	console.log(msg);
+    }).catch(msg => {
+        console.log(msg);
+    });
+}
+    
