@@ -97,6 +97,12 @@ function location_handler(context, event)
 	Promise.all(task).then(res => {
 	    var msgs1 = google_place_to_line_location_message(res[0].results[0]);
 	    var msgs2 = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
+	    msgs2.push(
+		{
+		    "type" : "text",
+		    "text" : "その他のメニューはこちら " + res[1].url
+		}
+	    );
             resolve(
 		{
 		    "replyToken" : event.replyToken,
