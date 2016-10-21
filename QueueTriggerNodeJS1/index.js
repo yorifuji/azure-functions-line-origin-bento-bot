@@ -54,8 +54,8 @@ function google_place_to_line_location_message(place)
         },
 	{
 	    "type"      : "location",
-//	    "title"     : place.name,
-	    "title"     : "最寄りのお店は「" + place.name + "」です",
+	    "title"     : place.name,
+//	    "title"     : "最寄りのお店は「" + place.name + "」です",
 	    "address"   : place.vicinity,
 	    "latitude"  : place.geometry.location.lat,
 	    "longitude" : place.geometry.location.lng
