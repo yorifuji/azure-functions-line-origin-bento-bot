@@ -54,7 +54,8 @@ function google_place_to_line_location_message(place)
         },
 	{
 	    "type"      : "location",
-	    "title"     : place.name,
+//	    "title"     : place.name,
+	    "title"     : "最寄りのお店は「" + place.name + "」です",
 	    "address"   : place.vicinity,
 	    "latitude"  : place.geometry.location.lat,
 	    "longitude" : place.geometry.location.lng
@@ -100,7 +101,7 @@ function location_handler(context, event)
 	    msgs2.push(
 		{
 		    "type" : "text",
-		    "text" : "その他のメニューはこちら " + res[1].url
+		    "text" : "その他のメニュー" + res[1].url
 		}
 	    );
             resolve(
@@ -142,6 +143,10 @@ function origin_menu_to_line_carousel(menu_list)
     ));
     
     return [
+        {
+	    "type" : "text",
+	    "text" : "今日のオススメはこちら！"
+        },
         {
             "type"     : "template",
             "altText"  : "origin menu choice",
