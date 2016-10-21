@@ -45,41 +45,21 @@ function make_google_places_url(lat, lon, name) {
     return google_places_api_url + query_str;
 }
 
-function google_places_to_reply_message(token, places)
+function google_place_to_line_location_message(place)
 {
-    return new Promise((resolve,reject) => {
-	if (places.results.length) {
-            var reply_message = {
-		"replyToken" : token,
-		"messages"   : [
-                    {
-			"type" : "text",
-			"text" : "最寄りのお店は「" + places.results[0].name + "」です"
-                    },
-		    {
-			"type"      : "location",
-			"title"     : places.results[0].name,
-			"address"   : places.results[0].vicinity,
-			"latitude"  : places.results[0].geometry.location.lat,
-			"longitude" : places.results[0].geometry.location.lng
-		    }
-		]
-            };
-            resolve(reply_message);
+    return [
+        {
+	    "type" : "text",
+	    "text" : "最寄りのお店は「" + place.name + "」です"
+        },
+	{
+	    "type"      : "location",
+	    "title"     : place.name,
+	    "address"   : place.vicinity,
+	    "latitude"  : place.geometry.location.lat,
+	    "longitude" : place.geometry.location.lng
 	}
-	else {
-            var reply_message = {
-		"replyToken" : token,
-		"messages"   : [
-                    {
-			"type" : "text",
-			"text" : "お店が見つかりません"
-                    }
-		]
-            };
-	    reject(reply_message);
-	}
-    });
+    ];
 }
 
 function search_origin_bento_shop(context, event)
@@ -99,26 +79,43 @@ function search_origin_bento_shop(context, event)
                 body += chunk;
             });
             res.on("end", () => {
-                resolve(google_places_to_reply_message(event.replyToken, JSON.parse(body)));
+                resolve(JSON.parse(body));
 	    });
         }).on("error", err => {
-            var reply_message = {
-                "replyToken" : event.replyToken,
-                "messages"   : [
-                    {
-                        "type" : "text",
-                        "text" : err.message
-                    }
-                ]
-            };
-            resolve(reply_message);
+            reject(err);
         });
     });
 }
 
 function location_handler(context, event)
 {
-    return search_origin_bento_shop(context, event);
+    return new Promise((resolve,reject) => {
+	var task = [
+	    search_origin_bento_shop(context, event),
+	    get_origin_bento_menu(context, event)
+	];
+	Promise.all(task).then(res => {
+	    var msgs1 = google_place_to_line_location_message(res[0].results[0]);
+	    var msgs2 = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
+            resolve(
+		{
+		    "replyToken" : event.replyToken,
+		    "messages"   : msgs1.concat(msgs2)
+		}
+	    );
+	}).catch(res => {
+            var reply_message = {
+		"replyToken" : event.replyToken,
+		"messages"   : [
+                    {
+			"type" : "text",
+			"text" : "お店が見つかりません"
+                    }
+		]
+            };
+	    reject(reply_message);
+	});
+    });
 }
 
 function origin_menu_to_line_carousel(menu_list)
@@ -164,7 +161,7 @@ function menu_choice(menu_list, pick_num) {
     return make_random_choice(pick_num, menu_list.length).map(idx => menu_list[idx]);
 }
     
-function get_origin_menu(context, event) {
+function get_origin_bento_menu(context, event) {
     return new Promise((resolve, reject) => {
         var req = https.get(process.env.ORIGIN_BENTO_API_URL, res => {
             var body = "";
@@ -173,25 +170,10 @@ function get_origin_menu(context, event) {
                 body += chunk;
             });
             res.on("end", res => {
-		var data = JSON.parse(body);
-                var origin_menu_carousel = origin_menu_to_line_carousel(menu_choice(data.menu, 3))
-                var reply_message = {
-                    "replyToken" : event.replyToken,
-                    "messages"   : origin_menu_carousel
-                };
-                resolve(reply_message);
+		resolve(JSON.parse(body));
             });
         }).on("error", err => {
-            var reply_message = {
-                "replyToken" : event.replyToken,
-                "messages"   : [
-                    {
-                        "type" : "text",
-                        "text" : err.message
-                    }
-                ]
-            };
-            resolve(reply_message);
+	    reject(err);
         });
     });
 }
@@ -199,7 +181,7 @@ function get_origin_menu(context, event) {
 var keyword_handlers = [
     {
         keyword : ["オリジン", "おりじん", "オリジン東秀", "東秀"],
-        handler : get_origin_menu
+        handler : get_origin_bento_menu
     }
 ];
 
@@ -252,8 +234,12 @@ module.exports = function (context, myQueueItem) {
 
 /* for test: node index.js */
 
-
 if (require.main === module) {
+    _main();
+}
+
+function _main()
+{
     var event = {
 	message : {
 	    latitude  : "35.683801",
@@ -262,10 +248,9 @@ if (require.main === module) {
 	replyToken : "token",
     };
     var context = console;
-    search_origin_bento_shop(context, event).then(msg => {
-	console.log(msg);
-    }).catch(msg => {
-        console.log(msg);
+    location_handler(context, event).then(res => {
+	console.log(res);
+    }).catch(res => {
+	console.log(res);
     });
 }
-    
