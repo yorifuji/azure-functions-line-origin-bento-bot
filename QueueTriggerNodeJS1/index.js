@@ -174,7 +174,7 @@ function get_origin_bento_menu(context, event)
             messages.push(
                 {
                     "type" : "text",
-                    "text" : ["メニュー一覧はこちら", res[0].url].join("\n")
+                    "text" : ["メニュー一覧", res[0].url].join("\n")
                 }
             );
             resolve(
