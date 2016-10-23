@@ -78,18 +78,11 @@ function location_handler(context, event)
             call_origin_bento_menu_api(context, event)
         ];
         Promise.all(task).then(res => {
-            var msgs1 = google_place_to_line_location_message(res[0].results[0]);
-            var msgs2 = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
-            msgs2.push(
-                {
-                    "type" : "text",
-                    "text" : "その他のメニュー" + res[1].url
-                }
-            );
+            var messages = google_place_to_line_location_message(res[0].results[0]);
             resolve(
                 {
                     "replyToken" : event.replyToken,
-                    "messages"   : msgs1.concat(msgs2)
+                    "messages"   : messages
                 }
             );
         }).catch(res => {
@@ -210,6 +203,10 @@ var keyword_handlers = [
     {
         keyword : ["menu", "めにゅー", "メニュー"],
         handler : get_origin_bento_menu
+    },
+    {
+        keyword : ["shop", "店", "お店", "みせ"],
+        handler : location_handler
     }
 ];
 
