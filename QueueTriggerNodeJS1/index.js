@@ -9,7 +9,7 @@ var message_handler = [
     },
     {
         "type"    : "text",
-        "handler" : message_handler
+        "handler" : keyword_handler
     }
 ];
 
@@ -75,7 +75,6 @@ function location_handler(context, event)
     return new Promise((resolve,reject) => {
         var task = [
             search_origin_bento_shop(context, event),
-            call_origin_bento_menu_api(context, event)
         ];
         Promise.all(task).then(res => {
             var messages = google_place_to_line_location_message(res[0].results[0]);
@@ -91,7 +90,7 @@ function location_handler(context, event)
                 "messages"   : [
                     {
                         "type" : "text",
-                        "text" : "お店が見つかりません"
+                        "text" : "お店が見つかりません\n" + res
                     }
                 ]
             };
@@ -171,11 +170,11 @@ function get_origin_bento_menu(context, event)
             call_origin_bento_menu_api(context, event)
         ];
         Promise.all(task).then(res => {
-            var messages = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
+            var messages = origin_menu_to_line_carousel(menu_choice(res[0].menu, 3));
             messages.push(
                 {
                     "type" : "text",
-                    "text" : ["メニュー一覧はこちら", res[1].url].join("\n")
+                    "text" : ["メニュー一覧はこちら", res[0].url].join("\n")
                 }
             );
             resolve(
@@ -190,7 +189,7 @@ function get_origin_bento_menu(context, event)
                 "messages"   : [
                     {
                         "type" : "text",
-                        "text" : "メニューが取得できませんでした"
+                        "text" : "メニューが取得できませんでした\n" + res
                     }
                 ]
             };
@@ -210,7 +209,7 @@ var keyword_handlers = [
     }
 ];
 
-function message_handler(context, event) {
+function keyword_handler(context, event) {
     for (var kh of keyword_handlers) {
         for (var keyword of kh.keyword) {
             if (keyword == event.message.text) {
@@ -268,12 +267,19 @@ function _main()
     var event = {
         message : {
             latitude  : "35.683801",
-            longitude : "139.753945"
+            longitude : "139.753945",
+	    text : "menu"
         },
         replyToken : "token",
     };
     var context = console;
     location_handler(context, event).then(res => {
+        console.log(res);
+    }).catch(res => {
+        console.log(res);
+    });
+
+    keyword_handler(context, event).then(res => {
         console.log(res);
     }).catch(res => {
         console.log(res);
