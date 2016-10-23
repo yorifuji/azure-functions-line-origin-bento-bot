@@ -36,11 +36,11 @@ function make_google_places_url(lat, lon, name) {
     const google_places_api_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
     const query_str = querystring.stringify({
         "key"      : process.env.GOOGLE_API_KEY,
-	"location" : lat + "," + lon,
-	"name"     : name,
-	"rankby"   : "distance",
-	"language" : "ja",
-	"type"     : "food"
+        "location" : lat + "," + lon,
+        "name"     : name,
+        "rankby"   : "distance",
+        "language" : "ja",
+        "type"     : "food"
     });
     return google_places_api_url + query_str;
 }
@@ -49,17 +49,17 @@ function google_place_to_line_location_message(place)
 {
     return [
         {
-	    "type" : "text",
-	    "text" : "最寄りのお店は「" + place.name + "」です"
+            "type" : "text",
+            "text" : "最寄りのお店は「" + place.name + "」です"
         },
-	{
-	    "type"      : "location",
-	    "title"     : place.name,
-//	    "title"     : "最寄りのお店は「" + place.name + "」です",
-	    "address"   : place.vicinity,
-	    "latitude"  : place.geometry.location.lat,
-	    "longitude" : place.geometry.location.lng
-	}
+        {
+            "type"      : "location",
+            "title"     : place.name,
+//          "title"     : "最寄りのお店は「" + place.name + "」です",
+            "address"   : place.vicinity,
+            "latitude"  : place.geometry.location.lat,
+            "longitude" : place.geometry.location.lng
+        }
     ];
 }
 
@@ -81,7 +81,7 @@ function search_origin_bento_shop(context, event)
             });
             res.on("end", () => {
                 resolve(JSON.parse(body));
-	    });
+            });
         }).on("error", err => {
             reject(err);
         });
@@ -91,37 +91,37 @@ function search_origin_bento_shop(context, event)
 function location_handler(context, event)
 {
     return new Promise((resolve,reject) => {
-	var task = [
-	    search_origin_bento_shop(context, event),
-	    get_origin_bento_menu(context, event)
-	];
-	Promise.all(task).then(res => {
-	    var msgs1 = google_place_to_line_location_message(res[0].results[0]);
-	    var msgs2 = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
-	    msgs2.push(
-		{
-		    "type" : "text",
-		    "text" : "その他のメニュー" + res[1].url
-		}
-	    );
+        var task = [
+            search_origin_bento_shop(context, event),
+            get_origin_bento_menu(context, event)
+        ];
+        Promise.all(task).then(res => {
+            var msgs1 = google_place_to_line_location_message(res[0].results[0]);
+            var msgs2 = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
+            msgs2.push(
+                {
+                    "type" : "text",
+                    "text" : "その他のメニュー" + res[1].url
+                }
+            );
             resolve(
-		{
-		    "replyToken" : event.replyToken,
-		    "messages"   : msgs1.concat(msgs2)
-		}
-	    );
-	}).catch(res => {
+                {
+                    "replyToken" : event.replyToken,
+                    "messages"   : msgs1.concat(msgs2)
+                }
+            );
+        }).catch(res => {
             var reply_message = {
-		"replyToken" : event.replyToken,
-		"messages"   : [
+                "replyToken" : event.replyToken,
+                "messages"   : [
                     {
-			"type" : "text",
-			"text" : "お店が見つかりません"
+                        "type" : "text",
+                        "text" : "お店が見つかりません"
                     }
-		]
+                ]
             };
-	    reject(reply_message);
-	});
+            reject(reply_message);
+        });
     });
 }
 
@@ -144,8 +144,8 @@ function origin_menu_to_line_carousel(menu_list)
     
     return [
         {
-	    "type" : "text",
-	    "text" : "今日のオススメはこちら！"
+            "type" : "text",
+            "text" : "今日のオススメはこちら！"
         },
         {
             "type"     : "template",
@@ -181,10 +181,10 @@ function get_origin_bento_menu(context, event) {
                 body += chunk;
             });
             res.on("end", res => {
-		resolve(JSON.parse(body));
+                resolve(JSON.parse(body));
             });
         }).on("error", err => {
-	    reject(err);
+            reject(err);
         });
     });
 }
@@ -252,16 +252,16 @@ if (require.main === module) {
 function _main()
 {
     var event = {
-	message : {
-	    latitude  : "35.683801",
-	    longitude : "139.753945"
-	},
-	replyToken : "token",
+        message : {
+            latitude  : "35.683801",
+            longitude : "139.753945"
+        },
+        replyToken : "token",
     };
     var context = console;
     location_handler(context, event).then(res => {
-	console.log(res);
+        console.log(res);
     }).catch(res => {
-	console.log(res);
+        console.log(res);
     });
 }
