@@ -13,24 +13,6 @@ var message_handler = [
     }
 ];
 
-function make_date_str() {
-    var d = new Date();
-    d.setTime(d.getTime() + 1000 * 60 * 60 * 9); // UTC --> JST
-
-    var year  = d.getFullYear();
-    var month = d.getMonth() + 1;
-    var date  = d.getDate();
-    var hour  = d.getHours();
-    var min   = d.getMinutes();
-
-    if (month < 10) month = '0' + month;
-    if (date  < 10) date  = '0' + date;
-    if (hour  < 10) hour  = '0' + hour;
-    if (min   < 10) min   = '0' + min;
-
-    return [year, month, date, hour, min].reduce((pre, cur) => pre + cur.toString());
-}
-
 function make_google_places_url(lat, lon, name) {
 
     const google_places_api_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
@@ -93,7 +75,7 @@ function location_handler(context, event)
     return new Promise((resolve,reject) => {
         var task = [
             search_origin_bento_shop(context, event),
-            get_origin_bento_menu(context, event)
+            call_origin_bento_menu_api(context, event)
         ];
         Promise.all(task).then(res => {
             var msgs1 = google_place_to_line_location_message(res[0].results[0]);
@@ -172,7 +154,7 @@ function menu_choice(menu_list, pick_num) {
     return make_random_choice(pick_num, menu_list.length).map(idx => menu_list[idx]);
 }
     
-function get_origin_bento_menu(context, event) {
+function call_origin_bento_menu_api(context, event) {
     return new Promise((resolve, reject) => {
         var req = https.get(process.env.ORIGIN_BENTO_API_URL, res => {
             var body = "";
@@ -189,9 +171,44 @@ function get_origin_bento_menu(context, event) {
     });
 }
 
+function get_origin_bento_menu(context, event)
+{
+    return new Promise((resolve,reject) => {
+        var task = [
+            call_origin_bento_menu_api(context, event)
+        ];
+        Promise.all(task).then(res => {
+            var messages = origin_menu_to_line_carousel(menu_choice(res[1].menu, 3));
+            messages.push(
+                {
+                    "type" : "text",
+                    "text" : ["メニュー一覧はこちら", res[1].url].join("\n")
+                }
+            );
+            resolve(
+                {
+                    "replyToken" : event.replyToken,
+                    "messages"   : messages
+                }
+            );
+        }).catch(res => {
+            var reply_message = {
+                "replyToken" : event.replyToken,
+                "messages"   : [
+                    {
+                        "type" : "text",
+                        "text" : "メニューが取得できませんでした"
+                    }
+                ]
+            };
+            reject(reply_message);
+        });
+    });
+}
+
 var keyword_handlers = [
     {
-        keyword : ["オリジン", "おりじん", "オリジン東秀", "東秀"],
+        keyword : ["menu", "めにゅー", "メニュー"],
         handler : get_origin_bento_menu
     }
 ];
